@@ -65,7 +65,7 @@ map_donot_edit = [
     "MAP_ROUTE110_TRICK_HOUSE_ENTRANCE",
     "MAP_ROUTE110_TRICK_HOUSE_END",
     "MAP_ROUTE110_TRICK_HOUSE_CORRIDOR",
-    "MAP_ANCIENT_TOMB", "MAP_ISLAND_CAVE",
+    "MAP_ANCIENT_TOMB", "MAP_ISLAND_CAVE", "MAP_DESERT_RUINS",
     "MAP_MOSSDEEP_CITY_GYM", # TODO: this would be an extra level of hell if implemented, but have to verify the puzzle too
     "MAP_SHOAL_CAVE_LOW_TIDE_ENTRANCE_ROOM",
     "MAP_SHOAL_CAVE_LOW_TIDE_LOWER_ROOM",
@@ -73,12 +73,14 @@ map_donot_edit = [
     "MAP_SHOAL_CAVE_LOW_TIDE_STAIRS_ROOM",
     "MAP_SHOAL_CAVE_HIGH_TIDE_ENTRANCE_ROOM",
     "MAP_SHOAL_CAVE_HIGH_TIDE_INNER_ROOM",
-        
+    "MAP_PETALBURG_CITY_GYM", # The exit warps are funky
+    "MAP_SCORCHED_SLAB", # Easy softlock, also a dead end anyhow
 ]
 
 mapwarp_donot_edit = [
     "MAP_PETALBURG_CITY_GYM_WARP0",
-    "MAP_PETALBURG_CITY_GYM_WARP1"
+    "MAP_PETALBURG_CITY_GYM_WARP1",
+    "MAP_ABANDONED_SHIP_CORRIDORS_1F_WARP5", # Locked
 ]
 
 map_exclusion_list = [
@@ -290,6 +292,9 @@ map_manual_links_monodir = [
     
     ("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP0"),
     ("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP1"),
+    
+    ("MAP_SKY_PILLAR_4F", "MAP_SKY_PILLAR_3F_WARP2"), # Floor falling
+    ("MAP_SKY_PILLAR_4F_WARP2", "MAP_SKY_PILLAR_3F_WARP0"), # Floor falling
 ]
 
 # Maps which definitely need warps linked manually
@@ -498,7 +503,7 @@ map_bidir_edge_attributes = [
     [("MAP_SOOTOPOLIS_CITY_WARP2", "MAP_SOOTOPOLIS_CITY"), {"requires": ["surf", "dive", "spicyweatherwallace", "talkleaders"]}], # Lake -> Gym
     [("MAP_SOOTOPOLIS_CITY", "MAP_SOOTOPOLIS_CITY_WARP1"), {"requires": ["surf"]}], # Lake -> Mart
     
-    [("MAP_SOOTOPOLIS_CITY_WARP4", "MAP_SOOTOPOLIS_CITY_WARP3"), {"requires": ["spicyweatherwallace"]}], # Lake -> Gym
+    [("MAP_SOOTOPOLIS_CITY_WARP4", "MAP_SOOTOPOLIS_CITY_WARP3"), {"requires": ["dive"]}], # House -> Cave of origin entrance
     
 
     # Evergrande requires waterfall to enter
@@ -1134,7 +1139,7 @@ print(verify_graph(G))
 threads = []
 num_threads = 0
 
-rand_idx = 23000
+rand_idx = 5952
 while True:
     if found_seed != -1:
         break

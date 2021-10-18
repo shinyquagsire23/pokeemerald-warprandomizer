@@ -8,6 +8,9 @@ import random
 import threading
 import time
 
+# Starting seed to search from
+rand_idx = 101540
+
 if "POKEEMERALD" not in os.environ or os.environ["POKEEMERALD"] is None:
     print("Please set POKEEMERALD environment variable to our pokeemerald directory path")
     print ("Exiting...")
@@ -38,7 +41,7 @@ map_donot_edit = [
     "MAP_TERRA_CAVE_END",
 
     "MAP_LITTLEROOT_TOWN"
-    "MAP_FIERY_PATH",
+    #"MAP_FIERY_PATH",
     "MAP_PETALBURG_WOODS",
     "MAP_LAVARIDGE_TOWN_GYM_1F",
     "MAP_LAVARIDGE_TOWN_GYM_B1F",
@@ -75,12 +78,21 @@ map_donot_edit = [
     "MAP_SHOAL_CAVE_HIGH_TIDE_INNER_ROOM",
     "MAP_PETALBURG_CITY_GYM", # The exit warps are funky
     "MAP_SCORCHED_SLAB", # Easy softlock, also a dead end anyhow
+    "MAP_TRAINER_HILL_1F",
+    "MAP_TRAINER_HILL_2F",
+    "MAP_TRAINER_HILL_3F",
+    "MAP_TRAINER_HILL_4F",
+    "MAP_TRAINER_HILL_ROOF",
+    "MAP_TRAINER_HILL_ELEVATOR",
 ]
 
 mapwarp_donot_edit = [
     "MAP_PETALBURG_CITY_GYM_WARP0",
     "MAP_PETALBURG_CITY_GYM_WARP1",
     "MAP_ABANDONED_SHIP_CORRIDORS_1F_WARP5", # Locked
+    "MAP_TRAINER_HILL_ENTRANCE_WARP2",
+    "MAP_SLATEPORT_CITY_HARBOR_WARP2",
+    "MAP_SLATEPORT_CITY_HARBOR_WARP3",
 ]
 
 map_exclusion_list = [
@@ -290,6 +302,11 @@ map_manual_links_monodir = [
     ("MAP_JAGGED_PASS_WARP2", "MAP_JAGGED_PASS_WARP4"),
     ("MAP_JAGGED_PASS_WARP3", "MAP_JAGGED_PASS_WARP4"),
     
+    ("MAP_JAGGED_PASS_WARP2", "MAP_JAGGED_PASS_WARP0"),
+    ("MAP_JAGGED_PASS_WARP2", "MAP_JAGGED_PASS_WARP1"),
+    ("MAP_JAGGED_PASS_WARP3", "MAP_JAGGED_PASS_WARP0"),
+    ("MAP_JAGGED_PASS_WARP3", "MAP_JAGGED_PASS_WARP1"),
+    
     ("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP0"),
     ("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP1"),
     
@@ -440,7 +457,10 @@ map_bidir_edge_attributes = [
     [("MAP_LILYCOVE_CITY", "MAP_ROUTE124"), {"requires": ["aquagone"]}],
     
     # Magma hideout
-    [("MAP_JAGGED_PASS", "MAP_MAGMA_HIDEOUT_1F_WARP0"), {"requires": ["magmaemblem"]}],
+    [("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP0"), {"requires": ["magmaemblem"]}],
+    [("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP1"), {"requires": ["magmaemblem"]}],
+    [("MAP_JAGGED_PASS_WARP2", "MAP_JAGGED_PASS_WARP4"), {"requires": ["magmaemblem"]}],
+    [("MAP_JAGGED_PASS_WARP3", "MAP_JAGGED_PASS_WARP4"), {"requires": ["magmaemblem"]}],
     [("MAP_MAGMA_HIDEOUT_1F_WARP0", "MAP_MAGMA_HIDEOUT_1F_WARP1"), {"requires": ["strength"]}],
     [("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_2F_1R"), {"requires": ["strength"]}],
     [("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_2F_3R"), {"requires": ["strength"]}],
@@ -586,10 +606,10 @@ for m in map_list:
     map_id_to_folder[m_id] = dirname
     map_folder_to_id[dirname] = m_id
     
-    if "UNUSED" in m_id or "BATTLE_FRONTIER" in m_id:
+    if "UNUSED" in m_id or "BATTLE_FRONTIER" in m_id or "BATTLE_TENT" in m_id:
         map_exclusion_list += [m_id]
     
-    if "LITTLEROOT" in m_id:
+    if "LITTLEROOT" in m_id or "BATTLE_TENT" in m_id:
         map_donot_edit += [m_id]
 
 # Exclude all indoor dynamic maps
@@ -1044,6 +1064,10 @@ def randompair_list(lst_orig, rand_idx):
                 # Some story events are stubborn.
                 if warpnode_getmap(rand1_w) in map_require_multidoors and map_numdoors[warpnode_getmap(rand2_w)] < 4:
                     cant_link = True
+                
+                # Don't link maps with themselves
+                if warpnode_getmap(rand1_w) == warpnode_getmap(rand2_w):
+                    cant_link = True
 
         if cant_link:
             lst.append(rand1)
@@ -1141,7 +1165,6 @@ print(verify_graph(G))
 threads = []
 num_threads = 0
 
-rand_idx = 16542
 while True:
     if found_seed != -1:
         break

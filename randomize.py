@@ -391,6 +391,8 @@ map_bidir_edge_attributes = [
     [("MAP_ROUTE104_MR_BRINEYS_HOUSE", "MAP_DEWFORD_TOWN"), {"requires": ["savepeeko"]}],
     
     [("MAP_DEWFORD_TOWN", "MAP_ROUTE109"), {"requires": ["letter"]}],
+    [("MAP_ROUTE107", "MAP_ROUTE108"), {"requires": ["surf"]}],
+    [("MAP_ROUTE108", "MAP_ROUTE109"), {"requires": ["surf"]}],
     
     # Aqua grunts blocking the warp
     [("MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_WARP5"), {"requires": ["sterngoods"]}],
@@ -1139,7 +1141,7 @@ print(verify_graph(G))
 threads = []
 num_threads = 0
 
-rand_idx = 5952
+rand_idx = 16542
 while True:
     if found_seed != -1:
         break

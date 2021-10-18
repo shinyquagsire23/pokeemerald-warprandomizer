@@ -9,7 +9,12 @@ import threading
 import time
 
 # Starting seed to search from
-rand_idx = 101540
+rand_idx = 126794
+
+# For searching, the found seed
+found_seed = -1
+threads = []
+num_threads = 0
 
 if "POKEEMERALD" not in os.environ or os.environ["POKEEMERALD"] is None:
     print("Please set POKEEMERALD environment variable to our pokeemerald directory path")
@@ -280,6 +285,18 @@ map_manual_links_bidir = [
     
     ("MAP_SKY_PILLAR_4F_WARP2", "MAP_SKY_PILLAR_4F_WARP1"),
     
+    ("MAP_RUSTURF_TUNNEL_WARP0", "MAP_RUSTURF_TUNNEL_WARP1"),
+    ("MAP_RUSTURF_TUNNEL_WARP1", "MAP_RUSTURF_TUNNEL_WARP2"),
+    
+    ("MAP_EVER_GRANDE_CITY_WARP3", "MAP_EVER_GRANDE_CITY_WARP0"),
+    
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_1F"),
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_2F"),
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_3F"),
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_4F"),
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_5F"),
+    ("MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ELEVATOR", "MAP_LILYCOVE_CITY_DEPARTMENT_STORE_ROOFTOP"),
+    
     # TODO All The Ledges
 ]
 
@@ -312,6 +329,8 @@ map_manual_links_monodir = [
     
     ("MAP_SKY_PILLAR_4F", "MAP_SKY_PILLAR_3F_WARP2"), # Floor falling
     ("MAP_SKY_PILLAR_4F_WARP2", "MAP_SKY_PILLAR_3F_WARP0"), # Floor falling
+    
+    ("MAP_MIRAGE_TOWER_3F", "MAP_MIRAGE_TOWER_2F_WARP0"),
 ]
 
 # Maps which definitely need warps linked manually
@@ -323,7 +342,7 @@ map_nomapnode = [
     "MAP_SEAFLOOR_CAVERN_ROOM5", "MAP_AQUA_HIDEOUT_B1F", "MAP_AQUA_HIDEOUT_B2F",
     "MAP_ABANDONED_SHIP_CORRIDORS_1F", "MAP_ABANDONED_SHIP_ROOMS_1F",
     "MAP_ABANDONED_SHIP_ROOMS_B1F", "MAP_ABANDONED_SHIP_HIDDEN_FLOOR_ROOMS",
-    "MAP_METEOR_FALLS_B1F_1R", "MAP_JAGGED_PASS",
+    "MAP_METEOR_FALLS_B1F_1R", "MAP_JAGGED_PASS", "MAP_RUSTURF_TUNNEL",
 ]
 
 # Bidirectional unlinks
@@ -381,6 +400,9 @@ map_manual_unlinks_bidir = [
     ("MAP_SKY_PILLAR_4F_WARP1", "MAP_SKY_PILLAR_4F"),
     
     ("MAP_SKY_PILLAR_3F_WARP2", "MAP_SKY_PILLAR_3F"),
+    
+    ("MAP_EVER_GRANDE_CITY_WARP0", "MAP_EVER_GRANDE_CITY"),
+    ("MAP_EVER_GRANDE_CITY_WARP3", "MAP_EVER_GRANDE_CITY"),
 ]
 
 # Monodirectional unlinks.
@@ -389,6 +411,14 @@ map_manual_unlinks_mono = [
     ("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_1F_WARP3"),
     ("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_1F_WARP2"),
     ("MAP_METEOR_FALLS_1F_1R_WARP3", "MAP_METEOR_FALLS_1F_1R_WARP5"), # Steven's cave
+    ("MAP_MT_PYRE_1F_WARP5", "MAP_MT_PYRE_2F_WARP4"), # holes in Mt Pyre are one-way
+    ("MAP_MT_PYRE_2F_WARP2", "MAP_MT_PYRE_3F_WARP4"),
+    ("MAP_MT_PYRE_2F_WARP3", "MAP_MT_PYRE_3F_WARP5"),
+    ("MAP_MT_PYRE_3F_WARP2", "MAP_MT_PYRE_4F_WARP4"),
+    ("MAP_MT_PYRE_3F_WARP3", "MAP_MT_PYRE_4F_WARP5"),
+    ("MAP_MT_PYRE_4F_WARP2", "MAP_MT_PYRE_5F_WARP3"),
+    ("MAP_MT_PYRE_4F_WARP3", "MAP_MT_PYRE_5F_WARP4"),
+    ("MAP_MT_PYRE_5F_WARP2", "MAP_MT_PYRE_6F_WARP1"),
 ]
 
 # Add attributes to bidirectional edges
@@ -404,7 +434,6 @@ map_bidir_edge_attributes = [
     
     [("MAP_ROUTE116", "MAP_ROUTE116_WARP1"), {"requires": ["savepeeko"]}],
     [("MAP_RUSTURF_TUNNEL_WARP0", "MAP_RUSTURF_TUNNEL_WARP1"), {"requires": ["savepeeko", "rocksmash"]}],
-    [("MAP_RUSTURF_TUNNEL_WARP0", "MAP_RUSTURF_TUNNEL_WARP2"), {"requires": ["savepeeko", "rocksmash"]}],
     [("MAP_ROUTE104_MR_BRINEYS_HOUSE", "MAP_DEWFORD_TOWN"), {"requires": ["savepeeko"]}],
     
     [("MAP_DEWFORD_TOWN", "MAP_ROUTE109"), {"requires": ["letter"]}],
@@ -419,16 +448,16 @@ map_bidir_edge_attributes = [
     [("MAP_SLATEPORT_CITY", "MAP_ROUTE110"), {"requires": ["museum"]}],
     
     # Bike entrance
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP2"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP3"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP2"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP3"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP2", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE_WARP3", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_NORTH_ENTRANCE"), {"requires": ["bike"]}],
     
     # Bike entrance 2
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP2"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP3"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP2"), {"requires": ["bike"]}],
-    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP3"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP0", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP1", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP2", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE"), {"requires": ["bike"]}],
+    [("MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE_WARP3", "MAP_ROUTE110_SEASIDE_CYCLING_ROAD_SOUTH_ENTRANCE"), {"requires": ["bike"]}],
 
     # New Mauville entrance
     [("MAP_ROUTE110", "MAP_ROUTE110_WARP0"), {"requires": ["surf"]}],
@@ -461,7 +490,7 @@ map_bidir_edge_attributes = [
     [("MAP_JAGGED_PASS_WARP4", "MAP_JAGGED_PASS_WARP1"), {"requires": ["magmaemblem"]}],
     [("MAP_JAGGED_PASS_WARP2", "MAP_JAGGED_PASS_WARP4"), {"requires": ["magmaemblem"]}],
     [("MAP_JAGGED_PASS_WARP3", "MAP_JAGGED_PASS_WARP4"), {"requires": ["magmaemblem"]}],
-    [("MAP_MAGMA_HIDEOUT_1F_WARP0", "MAP_MAGMA_HIDEOUT_1F_WARP1"), {"requires": ["strength"]}],
+    [("MAP_MAGMA_HIDEOUT_1F_WARP0", "MAP_MAGMA_HIDEOUT_1F"), {"requires": ["strength"]}],
     [("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_2F_1R"), {"requires": ["strength"]}],
     [("MAP_MAGMA_HIDEOUT_1F", "MAP_MAGMA_HIDEOUT_2F_3R"), {"requires": ["strength"]}],
     
@@ -570,6 +599,15 @@ map_bidir_edge_attributes = [
     [("MAP_GRANITE_CAVE_B1F_WARP4", "MAP_GRANITE_CAVE_B1F"), {"requires": ["bike"]}],
     [("MAP_GRANITE_CAVE_B1F_WARP5", "MAP_GRANITE_CAVE_B1F"), {"requires": ["bike"]}],
     [("MAP_GRANITE_CAVE_B1F_WARP6", "MAP_GRANITE_CAVE_B1F"), {"requires": ["bike"]}],
+    
+    # Guy blocking the entrance
+    [("MAP_RUSTBORO_CITY_DEVON_CORP_3F_WARP2", "MAP_RUSTBORO_CITY_DEVON_CORP_3F"), {"requires": ["savepeeko"]}],
+    
+    [("MAP_MIRAGE_TOWER_2F_WARP0", "MAP_MIRAGE_TOWER_2F"), {"requires": ["bike"]}],
+    [("MAP_MIRAGE_TOWER_2F_WARP1", "MAP_MIRAGE_TOWER_2F"), {"requires": ["bike"]}],
+    
+    [("MAP_MIRAGE_TOWER_3F_WARP0", "MAP_MIRAGE_TOWER_3F"), {"requires": ["rocksmash"]}],
+    [("MAP_MIRAGE_TOWER_3F_WARP1", "MAP_MIRAGE_TOWER_3F"), {"requires": ["rocksmash"]}],
 ]
 
 map_list = []
@@ -808,183 +846,184 @@ def verify_graph(G):
         requires_has = []
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = True
-
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_ROUTE103"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_ROUTE103", "MAP_LITTLEROOT_TOWN"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP0"))
+        try_path_or_fail(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_ROUTE103")
+        try_path_or_fail(G_mod, "MAP_ROUTE103", "MAP_LITTLEROOT_TOWN")
+        try_path_or_fail(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP0")
 
         #try:
-        #    print (compound_check, nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP0"))
+        #    print (compound_check, nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP0")
         #except:
         #    return False
 
         requires_has += ["wally"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_PETALBURG_CITY", "MAP_RUSTBORO_CITY"))
-
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_RUSTBORO_CITY_GYM"))
+        try_path_or_fail(G_mod, "MAP_PETALBURG_CITY_GYM_WARP0", "MAP_RUSTBORO_CITY_GYM")
+        try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY_GYM", "MAP_RUSTBORO_CITY")
 
         # Player has gym1 and can now get savepeeko
         requires_has += ["gym1"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_RUSTURF_TUNNEL"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTURF_TUNNEL", "MAP_RUSTBORO_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY_DEVON_CORP_3F", "MAP_RUSTBORO_CITY"))
+        try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_RUSTURF_TUNNEL_WARP0") # Meet panicked Devon guy on the way
+        try_path_or_fail(G_mod, "MAP_RUSTURF_TUNNEL_WARP0", "MAP_RUSTBORO_CITY") # panicked Devon guy teleports us
+        try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY_DEVON_CORP_3F", "MAP_RUSTBORO_CITY") # Get pokenav stuff
 
         requires_has += ["savepeeko"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_ROUTE104_MR_BRINEYS_HOUSE"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_DEWFORD_TOWN"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_DEWFORD_TOWN", "MAP_GRANITE_CAVE_STEVENS_ROOM"))
+        try_path_or_fail(G_mod, "MAP_RUSTBORO_CITY", "MAP_ROUTE104_MR_BRINEYS_HOUSE") # TODO: Maybe skip Briney as an explicit step?
+        try_path_or_fail(G_mod, "MAP_ROUTE104_MR_BRINEYS_HOUSE", "MAP_DEWFORD_TOWN")
+        try_path_or_fail(G_mod, "MAP_DEWFORD_TOWN", "MAP_GRANITE_CAVE_STEVENS_ROOM")
 
-        #compound_check = (compound_check and nx.shortest_path(G_mod, "MAP_ROUTE104_MR_BRINEYS_HOUSE", "MAP_GRANITE_CAVE_STEVENS_ROOM"))
+        #nx.shortest_path(G_mod, "MAP_ROUTE104_MR_BRINEYS_HOUSE", "MAP_GRANITE_CAVE_STEVENS_ROOM")
 
         requires_has += ["letter"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_GRANITE_CAVE_STEVENS_ROOM", "MAP_SLATEPORT_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_STERNS_SHIPYARD_1F"))
+        try_path_or_fail(G_mod, "MAP_GRANITE_CAVE_STEVENS_ROOM", "MAP_SLATEPORT_CITY")
+        try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_STERNS_SHIPYARD_1F")
 
         requires_has += ["sterngoods"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_OCEANIC_MUSEUM_2F"))
+        try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_OCEANIC_MUSEUM_2F")
 
         requires_has += ["museum"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_MAUVILLE_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_MAUVILLE_CITY_GYM"))
+        try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_MAUVILLE_CITY")
+        try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_MAUVILLE_CITY_GYM")
 
         requires_has += ["gym3"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_MAUVILLE_CITY_HOUSE1"))
+        try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_MAUVILLE_CITY_HOUSE1")
         requires_has += ["rocksmash"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_FALLARBOR_TOWN"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_FALLARBOR_TOWN", "MAP_ROUTE114"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_FALLARBOR_TOWN", "MAP_METEOR_FALLS_1F_1R_WARP0"))
+        try_path_or_fail(G_mod, "MAP_MAUVILLE_CITY", "MAP_FALLARBOR_TOWN")
+        try_path_or_fail(G_mod, "MAP_FALLARBOR_TOWN", "MAP_ROUTE114")
+        try_path_or_fail(G_mod, "MAP_FALLARBOR_TOWN", "MAP_METEOR_FALLS_1F_1R_WARP0")
 
         requires_has += ["meteorite"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_METEOR_FALLS_1F_1R_WARP0", "MAP_MT_CHIMNEY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MT_CHIMNEY", "MAP_LAVARIDGE_TOWN"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN", "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25"))
+        try_path_or_fail(G_mod, "MAP_METEOR_FALLS_1F_1R_WARP0", "MAP_MT_CHIMNEY")
+        try_path_or_fail(G_mod, "MAP_MT_CHIMNEY", "MAP_LAVARIDGE_TOWN")
+        try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN", "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25")
+        try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25", "MAP_LAVARIDGE_TOWN") # goggles
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN_GYM_1F", "MAP_RUSTURF_TUNNEL")) # strength from the tunnel guy
-
-        #print (compound_check, nx.shortest_path(G_mod, "MAP_LAVARIDGE_TOWN_GYM_1F", "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25"))
-
-        requires_has += ["strength", "goggles"]
+        requires_has += ["goggles"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN", "MAP_DEWFORD_TOWN_GYM"))
+        try_path_or_fail(G_mod, "MAP_LAVARIDGE_TOWN", "MAP_RUSTURF_TUNNEL_WARP1") # strength from the tunnel guy
+
+        #print (nx.shortest_path(G_mod, "MAP_LAVARIDGE_TOWN_GYM_1F", "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25"))
+
+        requires_has += ["strength"]
+        G_mod = cut_graph_with_requirements(G, requires_has)
+
+        try_path_or_fail(G_mod, "MAP_RUSTURF_TUNNEL_WARP1", "MAP_DEWFORD_TOWN_GYM")
 
         requires_has += ["flash"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and (try_path_or_fail(G_mod, "MAP_DEWFORD_TOWN_GYM", "MAP_PETALBURG_CITY_GYM_WARP34")))
+        try_path_or_fail(G_mod, "MAP_DEWFORD_TOWN_GYM", "MAP_PETALBURG_CITY_GYM_WARP34")
 
-        #print (compound_check, nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP34"))
+        #print (nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_PETALBURG_CITY_GYM_WARP34"))
 
         requires_has += ["surf"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE118"))
-        #compound_check = (compound_check and nx.shortest_path(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE118"))
+        try_path_or_fail(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE118")
+        #nx.shortest_path(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE118")
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE119_WEATHER_INSTITUTE_2F"))
+        try_path_or_fail(G_mod, "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE119_WEATHER_INSTITUTE_2F")
 
         requires_has += ["weatherinst"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_ROUTE119_WEATHER_INSTITUTE_2F", "MAP_FORTREE_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_FORTREE_CITY", "MAP_ROUTE120"))
+        try_path_or_fail(G_mod, "MAP_ROUTE119_WEATHER_INSTITUTE_2F", "MAP_FORTREE_CITY")
+        try_path_or_fail(G_mod, "MAP_FORTREE_CITY", "MAP_ROUTE120")
 
         requires_has += ["scope"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_FORTREE_CITY", "MAP_FORTREE_CITY_GYM"))
+        try_path_or_fail(G_mod, "MAP_FORTREE_CITY", "MAP_FORTREE_CITY_GYM")
 
         requires_has += ["fly"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_FORTREE_CITY_GYM", "MAP_LILYCOVE_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_LILYCOVE_CITY", "MAP_MT_PYRE_SUMMIT"))
+        try_path_or_fail(G_mod, "MAP_FORTREE_CITY_GYM", "MAP_LILYCOVE_CITY")
+        try_path_or_fail(G_mod, "MAP_LILYCOVE_CITY", "MAP_MT_PYRE_SUMMIT")
 
         requires_has += ["magmaemblem"]
         G_mod = cut_graph_with_requirements(G, requires_has)
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MT_PYRE_SUMMIT", "MAP_MAGMA_HIDEOUT_4F"))
+        try_path_or_fail(G_mod, "MAP_MT_PYRE_SUMMIT", "MAP_MAGMA_HIDEOUT_4F")
 
         requires_has += ["magmadone"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MAGMA_HIDEOUT_4F", "MAP_SLATEPORT_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_HARBOR"))
+        try_path_or_fail(G_mod, "MAP_MAGMA_HIDEOUT_4F", "MAP_SLATEPORT_CITY")
+        try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_SLATEPORT_CITY_HARBOR")
 
         requires_has += ["aquasub"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_AQUA_HIDEOUT_1F"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_AQUA_HIDEOUT_1F", "MAP_AQUA_HIDEOUT_B2F_WARP8")) # TODO be more specific
+        try_path_or_fail(G_mod, "MAP_SLATEPORT_CITY", "MAP_AQUA_HIDEOUT_1F")
+        try_path_or_fail(G_mod, "MAP_AQUA_HIDEOUT_1F", "MAP_AQUA_HIDEOUT_B2F_WARP8") # TODO be more specific
 
         requires_has += ["aquagone"]
         G_mod = cut_graph_with_requirements(G, requires_has)
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_AQUA_HIDEOUT_B2F_WARP8", "MAP_MOSSDEEP_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY", "MAP_MOSSDEEP_CITY_GYM_WARP13")) # TODO be more specific
+        try_path_or_fail(G_mod, "MAP_AQUA_HIDEOUT_B2F_WARP8", "MAP_MOSSDEEP_CITY")
+        try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY", "MAP_MOSSDEEP_CITY_GYM_WARP13") # TODO be more specific
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_GYM", "MAP_MOSSDEEP_CITY_SPACE_CENTER_2F"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_SPACE_CENTER_2F", "MAP_MOSSDEEP_CITY_STEVENS_HOUSE"))
+        try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_GYM", "MAP_MOSSDEEP_CITY_SPACE_CENTER_2F")
+        try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_SPACE_CENTER_2F", "MAP_MOSSDEEP_CITY_STEVENS_HOUSE")
 
         requires_has += ["dive"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
         # TODO: verify player has surf + dive before room9, warps to MAP_ROUTE128
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_STEVENS_HOUSE", "MAP_SEAFLOOR_CAVERN_ENTRANCE"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_STEVENS_HOUSE", "MAP_SEAFLOOR_CAVERN_ROOM9"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_ROUTE128", "MAP_SOOTOPOLIS_CITY"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_CAVE_OF_ORIGIN_B1F"))
+        try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_STEVENS_HOUSE", "MAP_SEAFLOOR_CAVERN_ENTRANCE")
+        try_path_or_fail(G_mod, "MAP_MOSSDEEP_CITY_STEVENS_HOUSE", "MAP_SEAFLOOR_CAVERN_ROOM9")
+        try_path_or_fail(G_mod, "MAP_ROUTE128", "MAP_SOOTOPOLIS_CITY")
+        try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_CAVE_OF_ORIGIN_B1F")
 
         requires_has += ["spicyweatherwallace"]
         G_mod = cut_graph_with_requirements(G, requires_has)
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_CAVE_OF_ORIGIN_B1F", "MAP_SKY_PILLAR_ENTRANCE"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SKY_PILLAR_ENTRANCE", "MAP_SKY_PILLAR_OUTSIDE"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SKY_PILLAR_OUTSIDE", "MAP_SKY_PILLAR_TOP"))
+        try_path_or_fail(G_mod, "MAP_CAVE_OF_ORIGIN_B1F", "MAP_SKY_PILLAR_ENTRANCE")
+        try_path_or_fail(G_mod, "MAP_SKY_PILLAR_ENTRANCE", "MAP_SKY_PILLAR_OUTSIDE")
+        try_path_or_fail(G_mod, "MAP_SKY_PILLAR_OUTSIDE", "MAP_SKY_PILLAR_TOP")
 
         # Fly
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SKY_PILLAR_TOP", "MAP_SOOTOPOLIS_CITY"))
+        try_path_or_fail(G_mod, "MAP_SKY_PILLAR_TOP", "MAP_SOOTOPOLIS_CITY")
 
         requires_has += ["talkleaders"]
         G_mod = cut_graph_with_requirements(G, requires_has)
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_SOOTOPOLIS_CITY_GYM_1F"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY_GYM_B1F", "MAP_SOOTOPOLIS_CITY_GYM_1F"))
+        try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_SOOTOPOLIS_CITY_GYM_1F")
+        try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY_GYM_B1F", "MAP_SOOTOPOLIS_CITY_GYM_1F")
 
         requires_has += ["waterfall"]
         G_mod = cut_graph_with_requirements(G, requires_has)
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_EVER_GRANDE_CITY"))
+        try_path_or_fail(G_mod, "MAP_SOOTOPOLIS_CITY", "MAP_EVER_GRANDE_CITY")
 
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY", "MAP_EVER_GRANDE_CITY_POKEMON_LEAGUE_1F"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_POKEMON_LEAGUE_1F", "MAP_EVER_GRANDE_CITY_SIDNEYS_ROOM"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_SIDNEYS_ROOM", "MAP_EVER_GRANDE_CITY_PHOEBES_ROOM"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_PHOEBES_ROOM", "MAP_EVER_GRANDE_CITY_GLACIAS_ROOM"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_GLACIAS_ROOM", "MAP_EVER_GRANDE_CITY_DRAKES_ROOM"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_DRAKES_ROOM", "MAP_EVER_GRANDE_CITY_CHAMPIONS_ROOM"))
-        compound_check = (compound_check and try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_CHAMPIONS_ROOM", "MAP_EVER_GRANDE_CITY_HALL_OF_FAME"))
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY", "MAP_EVER_GRANDE_CITY_POKEMON_LEAGUE_1F")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_POKEMON_LEAGUE_1F", "MAP_EVER_GRANDE_CITY_SIDNEYS_ROOM")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_SIDNEYS_ROOM", "MAP_EVER_GRANDE_CITY_PHOEBES_ROOM")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_PHOEBES_ROOM", "MAP_EVER_GRANDE_CITY_GLACIAS_ROOM")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_GLACIAS_ROOM", "MAP_EVER_GRANDE_CITY_DRAKES_ROOM")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_DRAKES_ROOM", "MAP_EVER_GRANDE_CITY_CHAMPIONS_ROOM")
+        try_path_or_fail(G_mod, "MAP_EVER_GRANDE_CITY_CHAMPIONS_ROOM", "MAP_EVER_GRANDE_CITY_HALL_OF_FAME")
 
-        print (compound_check)
-        return compound_check
+        print (True)
+        return True
     except Exception as e:
         print (e)
         return False
-    #print (compound_check, nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_EVER_GRANDE_CITY_HALL_OF_FAME"))
+    #print (nx.shortest_path(G_mod, "MAP_LITTLEROOT_TOWN", "MAP_EVER_GRANDE_CITY_HALL_OF_FAME"))
 
 a,b = [list(c) for c in zip(*biconnections)]
 bidir_warps = a+b
@@ -1145,8 +1184,6 @@ def gen_graph_for_seed(G_rand_cut, rand_idx):
     
     return G_rand
 
-found_seed = -1
-
 def attempt_seed(G_rand_cut, rand_idx):
     global found_seed, num_threads
     #print (rand_idx)
@@ -1162,44 +1199,84 @@ def attempt_seed(G_rand_cut, rand_idx):
 
 print(verify_graph(G))
 
-threads = []
-num_threads = 0
+def find_random_seed_and_apply():
+    global G, found_seed, threads, num_threads, rand_idx
 
-while True:
-    if found_seed != -1:
-        break
-    if num_threads >= 50:
-        time.sleep(0.01)
-        continue
+    while True:
+        if found_seed != -1:
+            break
+        if num_threads >= 50:
+            time.sleep(0.01)
+            continue
 
-    print (rand_idx)
-    x = threading.Thread(target=attempt_seed, args=(G_rand_cut.copy(), rand_idx,))
-    num_threads += 1
-    x.start()
-    threads += [x]
-    
-    # Update list
-    if len(threads) > 1000:
-        for t in threads:
-            t.handled = False
-            if not t.is_alive():
-                t.handled = True
-        threads = [t for t in threads if not t.handled]
-    
-    rand_idx += 1
+        print (rand_idx)
+        x = threading.Thread(target=attempt_seed, args=(G_rand_cut.copy(), rand_idx,))
+        num_threads += 1
+        x.start()
+        threads += [x]
+        
+        # Update list
+        if len(threads) > 1000:
+            for t in threads:
+                t.handled = False
+                if not t.is_alive():
+                    t.handled = True
+            threads = [t for t in threads if not t.handled]
+        
+        rand_idx += 1
 
-for t in threads:
-    t.join()
+    for t in threads:
+        t.join()
 
-# Reseed and apply
-rand_bidir_warppairs = randompair_list(bidir_warppairs, found_seed)
-apply_random_warppairs(rand_bidir_warppairs)
+    # Reseed and apply
+    rand_bidir_warppairs = randompair_list(bidir_warppairs, found_seed)
+    apply_random_warppairs(rand_bidir_warppairs)
 
-G_rand = gen_graph_for_seed(G_rand_cut, found_seed)
+    G_rand = gen_graph_for_seed(G_rand_cut, found_seed)
+    G = G_rand
 
-print(nx.shortest_path(cut_graph_with_requirements(G_rand, ["wally"]), "MAP_LITTLEROOT_TOWN", "MAP_RUSTBORO_CITY_GYM"))
+def print_routing():
+    deps = ["wally"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_LITTLEROOT_TOWN", "MAP_RUSTBORO_CITY_GYM"))
+    deps += ["gym1"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTBORO_CITY_GYM", "MAP_RUSTBORO_CITY"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTBORO_CITY", "MAP_RUSTURF_TUNNEL_WARP0"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTURF_TUNNEL_WARP0", "MAP_RUSTBORO_CITY"))
+    deps += ["savepeeko"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTBORO_CITY_DEVON_CORP_3F", "MAP_RUSTBORO_CITY"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTBORO_CITY", "MAP_GRANITE_CAVE_STEVENS_ROOM"))
+    deps += ["letter"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_GRANITE_CAVE_STEVENS_ROOM", "MAP_SLATEPORT_CITY_STERNS_SHIPYARD_1F"))
+    deps += ["sterngoods"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_SLATEPORT_CITY_STERNS_SHIPYARD_1F", "MAP_SLATEPORT_CITY_OCEANIC_MUSEUM_2F"))
+    deps += ["museum"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_SLATEPORT_CITY_OCEANIC_MUSEUM_2F", "MAP_MAUVILLE_CITY"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_MAUVILLE_CITY", "MAP_MAUVILLE_CITY_GYM"))
+    deps += ["gym3"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_MAUVILLE_CITY_GYM", "MAP_MAUVILLE_CITY_HOUSE1"))
+    deps += ["rocksmash"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_MAUVILLE_CITY_HOUSE1", "MAP_METEOR_FALLS_1F_1R_WARP0"))
+    deps += ["meteorite"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_METEOR_FALLS_1F_1R_WARP0", "MAP_MT_CHIMNEY"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_MT_CHIMNEY", "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25"))
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_LAVARIDGE_TOWN_GYM_1F_WARP25", "MAP_LAVARIDGE_TOWN"))
+    deps += ["goggles"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_LAVARIDGE_TOWN", "MAP_RUSTURF_TUNNEL_WARP1"))
+    deps += ["strength"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_RUSTURF_TUNNEL_WARP1", "MAP_DEWFORD_TOWN_GYM"))
+    deps += ["flash"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_DEWFORD_TOWN_GYM", "MAP_PETALBURG_CITY_GYM_WARP34"))
+    deps += ["surf"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_PETALBURG_CITY_WALLYS_HOUSE", "MAP_ROUTE119_WEATHER_INSTITUTE_2F"))
+    deps += ["weatherinst"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_ROUTE119_WEATHER_INSTITUTE_2F", "MAP_ROUTE120"))
+    deps += ["scope"]
+    print(nx.shortest_path(cut_graph_with_requirements(G, deps), "MAP_ROUTE120", "MAP_FORTREE_CITY_GYM"))
+    deps += ["fly"]
 
-G = G_rand
+
+find_random_seed_and_apply()
+print_routing()
 
 draw_network = False
 if draw_network:
